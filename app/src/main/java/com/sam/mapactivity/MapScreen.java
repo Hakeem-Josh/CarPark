@@ -1,26 +1,20 @@
 package com.sam.mapactivity;
 
 
-import android.Manifest;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Criteria;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
-import android.os.Bundle;
-import android.provider.DocumentsContract;
 import android.provider.Settings;
-import android.sax.Element;
-import android.support.multidex.MultiDex;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.AlertDialog;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
@@ -28,10 +22,8 @@ import android.widget.Toast;
 import com.androidproject.parkassist.R;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
@@ -39,6 +31,7 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -50,13 +43,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-public class MapScreen extends FragmentActivity implements android.location.LocationListener, OnMapReadyCallback, GoogleMap.OnInfoWindowClickListener {
+public class MapScreen extends FragmentActivity implements LocationListener {
 
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     //Paramters for getting current user location
@@ -65,7 +57,7 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
     private String provider;
     private Location location = null;
     private static List<String> myLocations = new ArrayList<String>();
-    private static List<ParkingDestination> parkings = new ArrayList<ParkingDestination>();
+    private static List<ParkingDestination>parkings= new ArrayList<ParkingDestination>();
 
 
     @Override
@@ -79,17 +71,17 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
         final ImageButton garageButton = (ImageButton) findViewById(R.id.garageButton);
         homeButton.setBackgroundColor(getResources().getColor(R.color.selected_color));// shows Home screen is slelected
 
-        setUpMapIfNeeded();
         // button click event of ParkMe button in the tab(second button)
         parkMeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MapScreen.this, ParkMe.class);
-                if (location != null) {
+                if(location!=null)
+                {
                     // sends current position and zoom level in the map
-                    intent.putExtra("latitude", location.getLatitude());
-                    intent.putExtra("longitude", location.getLongitude());
-                    intent.putExtra("zoomLevel", mMap.getCameraPosition().zoom);
+                    intent.putExtra("latitude",location.getLatitude());
+                    intent.putExtra("longitude",location.getLongitude());
+                    intent.putExtra("zoomLevel",mMap.getCameraPosition().zoom);
 
                 }
 
@@ -102,27 +94,28 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
             @Override
             public void onClick(View v) {
                 // Checks if parked location is stored or not from app database
-                ParkingLocationStoreDB locationStoreDB = new ParkingLocationStoreDB(getApplicationContext());
+                ParkingLocationStoreDB locationStoreDB =  new ParkingLocationStoreDB(getApplicationContext());
                 Cursor cursor = locationStoreDB.getAllLocations();
-                if (cursor.getCount() > 0) {
+                if(cursor.getCount()>0)
+                {
                     // if location present calls the WalkingDirection activity
-                    Intent intent = new Intent(MapScreen.this, WalkingDirections.class);
+                    Intent intent = new Intent(MapScreen.this,WalkingDirections.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
 
-                } else {
+                }
+                else{
                     //message shown to the user
-                    Toast.makeText(getApplicationContext(), "Please park the Car", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(),"Please park the Car",Toast.LENGTH_LONG).show();
                 }
             }
         });
-
         //Button Click event to show the repair shops around current location
         garageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Intent intent = new Intent(MapScreen.this, RepairShopActivity.class);
+                Intent intent = new Intent(MapScreen.this,RepairShopActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                 startActivity(intent);
             }
@@ -131,51 +124,35 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
 
         String url = getApplicationContext().getResources().getString(R.string.url);
         int status = GooglePlayServicesUtil.isGooglePlayServicesAvailable(getBaseContext());
-        if (status != ConnectionResult.SUCCESS) {
+        if (status != ConnectionResult.SUCCESS)
+        {
             // Google Play Services are not available
 
             int requestCode = 10;
             Dialog dialog = GooglePlayServicesUtil.getErrorDialog(status, this, requestCode);
             dialog.show();
 
-        } else {
+        } else
+        {
             //gets the cached location from application
             locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
             criteria = new Criteria();
             criteria.setAccuracy(Criteria.ACCURACY_FINE);
             provider = locationManager.getBestProvider(criteria, true);
             setUpMapIfNeeded();
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 100, this);
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,0,100,this);
             location = locationManager.getLastKnownLocation(provider);
             // if location is null then disable other buttons
-            if (location == null) {
+            if(location==null)
+            {
                 Toast.makeText(getApplicationContext(), "Location is Null", Toast.LENGTH_LONG).show();
                 parkMeButton.setClickable(false);
                 walkDirectionsButton.setClickable(false);
                 garageButton.setClickable(false);
             }
             //enable buttons if location is present and draw car marker at the current location
-            if (location != null) {
+            if (location != null)
+            {
 
 
                 drawMarker(location);
@@ -186,7 +163,36 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
             // gets Parking location XML provided by Streetline Availability API
             new CallAPI().execute(url);
 
+            // Sets on click listener for the information window dispalyed on position marker
+            // displays Parking Information activity
+            mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+                @Override
+                public void onInfoWindowClick(Marker marker) {
+                    // checks which marker has been clicked
+                    ParkingDestination destination = new ParkingDestination();
+                    LatLng markerPos = marker.getPosition();
+                    for(int i=0;i<parkings.size();i++){
 
+                        destination = parkings.get(i);
+                        LatLng listPos = new LatLng(destination.getLatitude(),destination.getLongitude());
+                        if(listPos.equals(markerPos)){
+                            break;
+                        }
+                    }
+                    Intent intent = new Intent(MapScreen.this,ParkingInformation.class);
+                    // adds parking information to the intent
+                    intent.putExtra("destinationName",destination.getDestinationName());
+                    intent.putExtra("destinationCoordinates",new String(destination.getLatitude()+"="+destination.getLongitude()));
+                    intent.putExtra("sourceCoordinates",new String(location.getLatitude()+"="+location.getLongitude()));
+                    intent.putExtra("rateHighest",destination.getRateHighest()==null?null:destination.getRateHighest().toString());
+                    intent.putExtra("rateLowest",destination.getRateLowest()==null?null:destination.getRateLowest().toString());
+                    intent.putExtra("rateDescription",destination.getRateDescription());
+                    intent.putExtra("capacity",destination.getSpaceCapacityTotal()==null?null:Integer.toString(destination.getSpaceCapacityTotal()));
+                    startActivity(intent);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+
+                }
+            });
         }
     }
 
@@ -195,7 +201,6 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
 
         drawMarker(newLocation);
         displayLocations();
-
 
     }
 
@@ -223,7 +228,6 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
         super.onResume();
         setUpMapIfNeeded();
     }
-
     // draws car marker for the current location
     private void drawMarker(Location location) {
         mMap.clear();
@@ -241,8 +245,8 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
     // sets up the map fragment
     private void setUpMapIfNeeded() {
         if (mMap == null) {
-             ((SupportMapFragment) Objects.requireNonNull(getSupportFragmentManager().findFragmentById(R.id.map)))
-                     .getMapAsync(this);
+            mMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
+                    .getMap();
             if (mMap != null) {
                 setUpMap();
             }
@@ -255,16 +259,6 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
             showGPSDisableDialog();
         } else {
             Toast.makeText(getApplicationContext(), "Waiting for location", Toast.LENGTH_SHORT).show();
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
             mMap.setMyLocationEnabled(false);
             //location = mMap.getMyLocation();
 
@@ -322,42 +316,6 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
         }
 
     }
-
-    @Override
-    public void onInfoWindowClick(Marker marker) {
-        // Sets on click listener for the information window dispalyed on position marker
-        // displays Parking Information activity
-        // checks which marker has been clicked
-        ParkingDestination destination = new ParkingDestination();
-        LatLng markerPos = marker.getPosition();
-        for (int i = 0; i < parkings.size(); i++) {
-
-            destination = parkings.get(i);
-            LatLng listPos = new LatLng(destination.getLatitude(), destination.getLongitude());
-            if (listPos.equals(markerPos)) {
-                break;
-            }
-        }
-        Intent intent = new Intent(MapScreen.this, ParkingInformation.class);
-        // adds parking information to the intent
-        intent.putExtra("destinationName", destination.getDestinationName());
-        intent.putExtra("destinationCoordinates", new String(destination.getLatitude() + "=" + destination.getLongitude()));
-        intent.putExtra("sourceCoordinates", new String(location.getLatitude() + "=" + location.getLongitude()));
-        intent.putExtra("rateHighest", destination.getRateHighest() == null ? null : destination.getRateHighest().toString());
-        intent.putExtra("rateLowest", destination.getRateLowest() == null ? null : destination.getRateLowest().toString());
-        intent.putExtra("rateDescription", destination.getRateDescription());
-        intent.putExtra("capacity", destination.getSpaceCapacityTotal() == null ? null : Integer.toString(destination.getSpaceCapacityTotal()));
-        startActivity(intent);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-          mMap = googleMap;
-          setUpMapIfNeeded();
-          mMap.setOnInfoWindowClickListener(this);
-    }
-
     // Async Taks class that gets the XML data
     private class CallAPI extends AsyncTask<String, String, String> {
         Long time = Long.valueOf(0);
@@ -484,7 +442,4 @@ public class MapScreen extends FragmentActivity implements android.location.Loca
 
 
     }
-
-
-
 }

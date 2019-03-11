@@ -1,16 +1,12 @@
 package com.sam.mapactivity;
-
-import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -20,7 +16,6 @@ import android.widget.Toast;
 import com.androidproject.parkassist.R;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
@@ -40,7 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class RepairShopActivity extends FragmentActivity implements android.location.LocationListener, OnMapReadyCallback , GoogleMap.OnInfoWindowClickListener {
+public class RepairShopActivity extends FragmentActivity implements android.location.LocationListener{
 
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private LocationManager locationManager;
@@ -63,7 +58,7 @@ public class RepairShopActivity extends FragmentActivity implements android.loca
         homeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(RepairShopActivity.this, MapScreen.class);
+                Intent intent = new Intent(RepairShopActivity. this,MapScreen.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                 startActivity(intent);
 
@@ -73,10 +68,11 @@ public class RepairShopActivity extends FragmentActivity implements android.loca
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(RepairShopActivity.this, ParkMe.class);
-                if (location != null) {
-                    intent.putExtra("latitude", location.getLatitude());
-                    intent.putExtra("longitude", location.getLongitude());
-                    intent.putExtra("zoomLevel", mMap.getCameraPosition().zoom);
+                if(location!=null)
+                {
+                    intent.putExtra("latitude",location.getLatitude());
+                    intent.putExtra("longitude",location.getLongitude());
+                    intent.putExtra("zoomLevel",mMap.getCameraPosition().zoom);
 
                 }
 
@@ -88,14 +84,16 @@ public class RepairShopActivity extends FragmentActivity implements android.loca
         walkDirectionsButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ParkingLocationStoreDB locationStoreDB = new ParkingLocationStoreDB(getApplicationContext());
+                ParkingLocationStoreDB locationStoreDB =  new ParkingLocationStoreDB(getApplicationContext());
                 Cursor cursor = locationStoreDB.getAllLocations();
-                if (cursor.getCount() > 0) {
-                    Intent intent = new Intent(RepairShopActivity.this, WalkingDirections.class);
+                if(cursor.getCount()>0)
+                {
+                    Intent intent = new Intent(RepairShopActivity.this,WalkingDirections.class);
                     intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
                     startActivity(intent);
 
-                } else {
+                }
+                else{
                     Toast.makeText(getApplicationContext(), "Please park the Car", Toast.LENGTH_LONG).show();
                 }
             }
@@ -107,31 +105,24 @@ public class RepairShopActivity extends FragmentActivity implements android.loca
         criteria = new Criteria();
         criteria.setAccuracy(Criteria.ACCURACY_FINE);
         provider = locationManager.getBestProvider(criteria, true);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
         location = locationManager.getLastKnownLocation(provider);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 100, this);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,100,this);
 
+        // calls google map to show navigation from current location to a repair shop
+        // on clicking information window of the marker
 
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                LatLng markerPos = marker.getPosition();
 
+                Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
+                        Uri.parse("http://maps.google.com/maps?saddr=" + location.getLatitude() + "," + location.getLongitude() + "&daddr=" + markerPos.latitude + "," + markerPos.longitude));
+                intent.setPackage("com.google.android.apps.maps");
+                startActivity(intent);
+
+            }
+        });
         if(location!=null){
 
             showMarker();
@@ -196,9 +187,8 @@ public class RepairShopActivity extends FragmentActivity implements android.loca
         // Do a null check to confirm that we have not already instantiated the map.
         if (mMap == null) {
             // Try to obtain the map from the SupportMapFragment.
-            SupportMapFragment mapFragment = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map));
-            assert mapFragment != null;
-            mapFragment.getMapAsync(this);
+            mMap = ((SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map))
+                    .getMap();
             // Check if we were successful in obtaining the map.
             if (mMap != null) {
                 setUpMap();
@@ -241,26 +231,6 @@ public class RepairShopActivity extends FragmentActivity implements android.loca
     @Override
     public void onProviderDisabled(String provider) {
 
-    }
-
-    @Override
-    public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        setUpMap();
-        mMap.setOnInfoWindowClickListener(this);
-    }
-
-    @Override
-    public void onInfoWindowClick(Marker marker) {
-        // calls google map to show navigation from current location to a repair shop
-        // on clicking information window of the marker
-
-        LatLng markerPos = marker.getPosition();
-
-        Intent intent = new Intent(android.content.Intent.ACTION_VIEW,
-                Uri.parse("http://maps.google.com/maps?saddr=" + location.getLatitude() + "," + location.getLongitude() + "&daddr=" + markerPos.latitude + "," + markerPos.longitude));
-        intent.setPackage("com.google.android.apps.maps");
-        startActivity(intent);
     }
 
     // Async Task to get repair shops using Google Places API

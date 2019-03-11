@@ -6,9 +6,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
-/**
- * Created by Saurabh on 2014-12-10.
- */
+/*
+* created by sam
+* */
 public class ParkingLocationStoreDB extends SQLiteOpenHelper {
 
     /** Database name */
